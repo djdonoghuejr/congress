@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+*.pyo
+*.pyd
+.env
+data/
+htmlcov/
+.coverage
+tmp_*.db
+tmp_raw*/
+tmp*_raw/
+senate_cookies.txt
+*.egg-info/

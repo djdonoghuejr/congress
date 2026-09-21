@@ -1,0 +1,127 @@
+# Congress Trades MVP
+
+Greenfield FastAPI/Postgres backend for ingesting official U.S. congressional trade disclosures from the House Clerk and Senate eFD systems.
+
+## MVP scope
+
+- FastAPI service with query endpoints for trades and filings
+- Canonical SQLAlchemy models for filers, filings, raw documents, transactions, ingestion runs, and ticker mappings
+- Official Senate connector for PTR discovery plus electronic report parsing
+- Official House connector for PTR discovery via the Clerk XML index plus PDF parsing
+- Raw artifact capture to disk before normalization
+- Alembic migration for the initial schema
+- pytest coverage for schema, parsers, one full Senate ingestion path, and API queries
+
+## Repo structure
+
+```text
+app/
+  api/                 FastAPI routers
+  core/                settings and JSON helpers
+  db/                  SQLAlchemy models, metadata, session management
+  ingestion/
+    connectors/        official House and Senate fetchers
+    parsers/           source-specific raw parsers
+    pipeline/          raw artifact storage
+  normalization/       canonical field normalization helpers
+  repositories/        read/query layer
+  services/            ingestion orchestration
+alembic/               migration environment and revisions
+tests/                 parser, ingestion, API, and schema tests
+compose.yml            local Postgres
+```
+
+## Local setup
+
+1. Create and activate a virtual environment.
+
+   Windows PowerShell:
+
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+2. Install the project and dev dependencies.
+
+   ```powershell
+   python -m pip install -e .[dev]
+   ```
+
+3. Copy the example environment file.
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+4. Start Postgres.
+
+   ```powershell
+   docker compose up -d postgres
+   ```
+
+5. Run the database migration.
+
+   ```powershell
+   alembic upgrade head
+   ```
+
+6. Start the API.
+
+   ```powershell
+   uvicorn app.main:app --reload
+   ```
+
+The API will be available at `http://127.0.0.1:8000`, with interactive docs at `/docs`.
+
+## Ingestion commands
+
+Ingest Senate periodic transaction reports for a date window:
+
+```powershell
+python -m app.cli ingest-senate --start-date 2026-01-01 --end-date 2026-01-31
+```
+
+Ingest House periodic transaction reports for a filing year:
+
+```powershell
+python -m app.cli ingest-house --year 2025
+```
+
+Optional flags:
+
+- `--limit N` for either command to cap discovery during local development
+
+Raw artifacts are written to `CONGRESS_RAW_STORAGE_DIR` and every normalized record keeps the original filing URL in the database.
+
+## API surface
+
+- `GET /health`
+- `GET /trades`
+- `GET /members/{member_id}/trades`
+- `GET /tickers/{ticker}/trades`
+- `GET /filings`
+
+Useful query params:
+
+- `/trades`: `limit`, `offset`, `chamber`, `ticker`, `start_date`, `end_date`
+- `/filings`: `limit`, `offset`, `chamber`, `source_system`, `member_id`, `report_type`, `start_date`, `end_date`
+
+## Tests
+
+Run the suite with:
+
+```powershell
+pytest
+```
+
+## Assumptions and current limitations
+
+- The application is designed around official sources only:
+  - Senate eFD search and report pages
+  - House Clerk yearly XML index plus official PTR PDFs
+- Senate electronic PTRs are fully parsed in this MVP.
+- Senate paper-image filings are captured as raw artifacts and stored as filings, but they remain partial because this MVP does not include OCR.
+- House PTR parsing is best-effort against text-extractable PDFs from the Clerk site.
+- Trade amounts remain ranges. The service stores `amount_low` and `amount_high` bounds when they are disclosed and never invents exact amounts.
+- Tickers remain nullable when the source does not provide a trustworthy symbol.
