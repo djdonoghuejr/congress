@@ -19,6 +19,7 @@ def _build_trade_filters(
     chamber: Chamber | None = None,
     ticker: str | None = None,
     member_id: UUID | None = None,
+    member_name: str | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
 ) -> TradeFilters:
@@ -28,6 +29,7 @@ def _build_trade_filters(
         chamber=chamber,
         ticker=ticker.upper() if ticker else None,
         member_id=member_id,
+        member_name=member_name,
         start_date=start_date,
         end_date=end_date,
     )
@@ -95,4 +97,3 @@ def list_ticker_trades(
         end_date=end_date,
     )
     return repository.list_trades(filters)
-

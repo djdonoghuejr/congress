@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models.enums import Chamber
+from app.db.models.enums import Chamber, TransactionType
 from app.db.models.filer import Filer
 from app.db.models.filing import Filing
 from app.db.models.transaction import Transaction
@@ -21,6 +21,8 @@ class TradeFilters:
     chamber: Chamber | None = None
     ticker: str | None = None
     member_id: UUID | None = None
+    member_name: str | None = None
+    transaction_type: TransactionType | None = None
     start_date: date | None = None
     end_date: date | None = None
 
@@ -45,6 +47,10 @@ class TradeRepository:
             statement = statement.where(func.upper(Transaction.ticker) == filters.ticker)
         if filters.member_id:
             statement = statement.where(Transaction.filer_id == filters.member_id)
+        if filters.member_name:
+            statement = statement.where(Filer.normalized_name.ilike(f"%{filters.member_name}%"))
+        if filters.transaction_type:
+            statement = statement.where(Transaction.transaction_type == filters.transaction_type)
         if filters.start_date:
             statement = statement.where(Transaction.transaction_date >= filters.start_date)
         if filters.end_date:
@@ -98,4 +104,3 @@ class TradeRepository:
             limit=filters.limit,
             offset=filters.offset,
         )
-

@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models.enums import Chamber, ReportType, SourceSystem
+from app.db.models.enums import Chamber, FilingStatus, ReportType, SourceSystem
 from app.db.models.filer import Filer
 from app.db.models.filing import Filing
 from app.db.models.transaction import Transaction
@@ -21,7 +21,9 @@ class FilingFilters:
     chamber: Chamber | None = None
     source_system: SourceSystem | None = None
     member_id: UUID | None = None
+    member_name: str | None = None
     report_type: ReportType | None = None
+    status: FilingStatus | None = None
     start_date: date | None = None
     end_date: date | None = None
 
@@ -45,8 +47,12 @@ class FilingRepository:
             statement = statement.where(Filing.source_system == filters.source_system)
         if filters.member_id:
             statement = statement.where(Filing.filer_id == filters.member_id)
+        if filters.member_name:
+            statement = statement.where(Filer.normalized_name.ilike(f"%{filters.member_name}%"))
         if filters.report_type:
             statement = statement.where(Filing.report_type == filters.report_type)
+        if filters.status:
+            statement = statement.where(Filing.status == filters.status)
         if filters.start_date:
             statement = statement.where(Filing.disclosure_date >= filters.start_date)
         if filters.end_date:
@@ -89,4 +95,3 @@ class FilingRepository:
             limit=filters.limit,
             offset=filters.offset,
         )
-

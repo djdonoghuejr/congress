@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     default_page_size: int = Field(default=50, ge=1, le=500)
     max_page_size: int = Field(default=200, ge=1, le=1000)
     http_timeout_seconds: float = Field(default=30.0, gt=0)
+    agent_model: str | None = Field(default=None)
+    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
     model_config = SettingsConfigDict(
         env_prefix="CONGRESS_",
@@ -29,4 +31,3 @@ def get_settings() -> Settings:
     settings = Settings()
     settings.raw_storage_dir.mkdir(parents=True, exist_ok=True)
     return settings
-

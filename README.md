@@ -92,6 +92,19 @@ Optional flags:
 
 - `--limit N` for either command to cap discovery during local development
 
+## Research copilot
+
+The project includes a read-only OpenAI Agents SDK research copilot over stored trades and filings.
+Set `OPENAI_API_KEY` and `CONGRESS_AGENT_MODEL` in `.env`, then ask a question:
+
+```powershell
+python -m app.cli research "Which senators disclosed AAPL purchases in 2026?"
+```
+
+The manager agent delegates to trade and filing specialists, which can only use bounded read-only
+database tools. Answers include source URLs and limitations. Agent runs are traced by the Agents SDK
+when tracing is enabled for the configured OpenAI organization.
+
 Raw artifacts are written to `CONGRESS_RAW_STORAGE_DIR` and every normalized record keeps the original filing URL in the database.
 
 ## API surface

@@ -26,6 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
     house.add_argument("--year", required=True, type=int)
     house.add_argument("--limit", type=int, default=None)
 
+    research = subparsers.add_parser(
+        "research", help="Ask a read-only Agents SDK copilot about stored disclosures"
+    )
+    research.add_argument("question", help="Natural-language question about local trade data")
+
     return parser
 
 
@@ -33,6 +38,11 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     settings = get_settings()
+
+    if args.command == "research":
+        _run_research(args.question, settings)
+        return
+
     raw_store = RawArtifactStore(settings)
     session = SessionLocal()
 
@@ -66,6 +76,65 @@ def main() -> None:
         session.close()
         if connector is not None:
             connector.close()
+
+
+def _run_research(question: str, settings) -> None:
+    if not settings.openai_api_key:
+        raise SystemExit(
+            "OPENAI_API_KEY is required for the research command. "
+            "Set it in .env or the current shell."
+        )
+    if not settings.agent_model:
+        raise SystemExit(
+            "CONGRESS_AGENT_MODEL is required for the research command. "
+            "Set it in .env or the current shell."
+        )
+
+    try:
+        from agents import Runner
+        from agents.exceptions import (
+            InputGuardrailTripwireTriggered,
+            OutputGuardrailTripwireTriggered,
+        )
+        from app.research.agents import build_research_manager
+    except ImportError as exc:
+        raise SystemExit(
+            "The Agents SDK is not installed. Install the project with `pip install -e .[dev]`."
+        ) from exc
+
+    import asyncio
+
+    session = SessionLocal()
+    try:
+        manager = build_research_manager(session, settings.agent_model)
+
+        async def run() -> object:
+            result = await Runner.run(manager, question)
+            return result.final_output
+
+        try:
+            answer = asyncio.run(run())
+        except (InputGuardrailTripwireTriggered, OutputGuardrailTripwireTriggered) as exc:
+            raise SystemExit(
+                "The research request was blocked by the copilot's data-scope or citation guardrail."
+            ) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise SystemExit(f"Research agent failed: {exc}") from exc
+
+        print(answer.answer)
+        if answer.findings:
+            print("\nFindings:")
+            for finding in answer.findings:
+                print(f"- {finding.statement}")
+                for citation in finding.citations:
+                    print(f"  Source: {citation.title} - {citation.url}")
+        if answer.limitations:
+            print("\nLimitations:")
+            for limitation in answer.limitations:
+                print(f"- {limitation}")
+        print(f"\nQuery scope: {answer.query_scope}")
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":
