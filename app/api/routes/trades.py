@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.models.enums import Chamber
+from app.db.models.enums import Chamber, TransactionType
 from app.db.session import get_db
 from app.repositories.trades import TradeFilters, TradeRepository
 from app.schemas.trade import TradeListResponse
@@ -22,6 +22,7 @@ def _build_trade_filters(
     member_name: str | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
+    transaction_type: TransactionType | None = None,
 ) -> TradeFilters:
     return TradeFilters(
         limit=limit,
@@ -32,6 +33,7 @@ def _build_trade_filters(
         member_name=member_name,
         start_date=start_date,
         end_date=end_date,
+        transaction_type=transaction_type,
     )
 
 
@@ -41,6 +43,8 @@ def list_trades(
     offset: int = Query(default=0, ge=0),
     chamber: Chamber | None = None,
     ticker: str | None = None,
+    member_name: str | None = Query(default=None, min_length=1, max_length=255),
+    transaction_type: TransactionType | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),
@@ -51,6 +55,8 @@ def list_trades(
         offset=offset,
         chamber=chamber,
         ticker=ticker,
+        member_name=member_name,
+        transaction_type=transaction_type,
         start_date=start_date,
         end_date=end_date,
     )

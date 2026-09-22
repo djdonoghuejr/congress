@@ -71,14 +71,23 @@ def test_trade_and_filing_endpoints_return_stored_data(api_client, db_session) -
     db_session.add(transaction)
     db_session.commit()
 
+    ui_response = api_client.get("/")
     trades_response = api_client.get("/trades")
+    filtered_trades_response = api_client.get(
+        "/trades", params={"member_name": "boozman", "transaction_type": "purchase"}
+    )
     member_response = api_client.get(f"/members/{filer.id}/trades")
     ticker_response = api_client.get("/tickers/AAPL/trades")
     filings_response = api_client.get("/filings")
 
+    assert ui_response.status_code == 200
+    assert "Congressional Trades" in ui_response.text
     assert trades_response.status_code == 200
     assert trades_response.json()["total"] == 1
     assert trades_response.json()["items"][0]["ticker"] == "AAPL"
+    assert filtered_trades_response.status_code == 200
+    assert filtered_trades_response.json()["total"] == 1
+    assert filtered_trades_response.json()["items"][0]["member_name"] == "John Boozman"
 
     assert member_response.status_code == 200
     assert member_response.json()["items"][0]["member_name"] == "John Boozman"

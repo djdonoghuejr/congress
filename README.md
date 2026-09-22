@@ -73,6 +73,7 @@ compose.yml            local Postgres
    ```
 
 The API will be available at `http://127.0.0.1:8000`, with interactive docs at `/docs`.
+The trades browser interface is available at `http://127.0.0.1:8000/`.
 
 ## Ingestion commands
 
@@ -108,6 +109,10 @@ when tracing is enabled for the configured OpenAI organization.
 Raw artifacts are written to `CONGRESS_RAW_STORAGE_DIR` and every normalized record keeps the original filing URL in the database.
 
 ## API surface
+
+The home page (`/`) provides a filterable trades table. Select a row to open a detail card with
+disclosure fields and a link to the source filing. Filters include member, ticker, chamber,
+transaction type, and transaction date range.
 
 - `GET /health`
 - `GET /trades`
