@@ -21,10 +21,22 @@ def build_parser() -> argparse.ArgumentParser:
     senate.add_argument("--start-date", required=True, type=date.fromisoformat)
     senate.add_argument("--end-date", required=True, type=date.fromisoformat)
     senate.add_argument("--limit", type=int, default=None)
+    senate.add_argument(
+        "--skip-existing-before",
+        type=date.fromisoformat,
+        default=None,
+        help="Skip parsed filings with disclosure dates earlier than this date",
+    )
 
     house = subparsers.add_parser("ingest-house", help="Ingest House PTR filings")
     house.add_argument("--year", required=True, type=int)
     house.add_argument("--limit", type=int, default=None)
+    house.add_argument(
+        "--skip-existing-before",
+        type=date.fromisoformat,
+        default=None,
+        help="Skip parsed filings with disclosure dates earlier than this date",
+    )
 
     research = subparsers.add_parser(
         "research", help="Ask a read-only Agents SDK copilot about stored disclosures"
@@ -56,20 +68,24 @@ def main() -> None:
                 "end_date": args.end_date,
                 "limit": args.limit,
             }
+            skip_existing_before = args.skip_existing_before
         else:
             connector = HouseConnector(settings=settings)
             filing_parser = HouseParser()
             kwargs = {"year": args.year, "limit": args.limit}
+            skip_existing_before = args.skip_existing_before
 
         service = IngestionService(session, raw_store)
         run = service.ingest(
             connector=connector,
             parser=filing_parser,
             discovery_kwargs=kwargs,
+            skip_existing_before=skip_existing_before,
         )
         print(
             f"run={run.id} status={run.status.value} "
             f"discovered={run.discovered_count} processed={run.processed_count} "
+            f"skipped={run.skipped_count} "
             f"transactions={run.stored_count} errors={run.error_count}"
         )
     finally:

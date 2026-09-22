@@ -101,5 +101,18 @@ def test_senate_ingestion_persists_transactions(db_session, tmp_path) -> None:
     assert len(transactions) == 2
     assert len(raw_documents) == 4
     assert transactions[0].ticker in {"AAPL", "ANET"}
-    connector.close()
 
+    repeat_run = service.ingest(
+        connector=connector,
+        parser=SenateParser(),
+        discovery_kwargs={
+            "start_date": date(2026, 1, 1),
+            "end_date": date(2026, 1, 31),
+            "limit": 1,
+        },
+        skip_existing_before=date(2026, 2, 1),
+    )
+    assert repeat_run.skipped_count == 1
+    assert repeat_run.processed_count == 0
+    assert len(db_session.scalars(select(Transaction)).all()) == 2
+    connector.close()

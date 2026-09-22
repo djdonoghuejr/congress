@@ -50,7 +50,14 @@
     .page-button { width: 34px; height: 32px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); }
     .page-button:disabled { cursor: not-allowed; opacity: .42; }
     .table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
-    table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+    table { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; white-space: nowrap; }
+    th:nth-child(1), td:nth-child(1) { width: 18%; }
+    th:nth-child(2), td:nth-child(2) { width: 8%; }
+    th:nth-child(3), td:nth-child(3) { width: 11%; }
+    th:nth-child(4), td:nth-child(4) { width: 7%; }
+    th:nth-child(5), td:nth-child(5) { width: 23%; }
+    th:nth-child(6), td:nth-child(6) { width: 13%; }
+    th:nth-child(7), td:nth-child(7) { width: 20%; }
     th { padding: 12px 16px; background: #f9fafb; color: #72808a; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
     td { padding: 14px 16px; border-top: 1px solid #edf0f2; font-size: 12px; }
     tbody tr { cursor: pointer; transition: background .15s; }
@@ -63,7 +70,10 @@
     .type { font-size: 11px; font-weight: 700; }
     .type-purchase { color: var(--green); }
     .type-sale { color: var(--red); }
-    .amount { color: #35434e; font-variant-numeric: tabular-nums; }
+    .side { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 6px; background: #edf6f0; color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+    .side-sale { background: #fbefef; color: var(--red); }
+    .amount { color: #35434e; font-size: 11px; font-variant-numeric: tabular-nums; white-space: normal; }
+    .asset-cell { overflow: hidden; text-overflow: ellipsis; }
     .state { display: grid; min-height: 240px; place-items: center; padding: 30px; color: var(--muted); font-size: 13px; text-align: center; }
     .state.error { color: #a33a3a; }
     .spinner { width: 22px; height: 22px; margin: 0 auto 12px; border: 2px solid #dce7ef; border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
@@ -121,7 +131,7 @@
 
       <div class="table-wrap" id="table-wrap">
         <table>
-          <thead><tr><th scope="col">Member</th><th scope="col">Chamber</th><th scope="col">Transaction date</th><th scope="col">Ticker</th><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Amount range</th></tr></thead>
+          <thead><tr><th scope="col">Member</th><th scope="col">Chamber</th><th scope="col">Transaction date</th><th scope="col">Ticker</th><th scope="col">Asset</th><th scope="col">Buy / sell</th><th scope="col" title="Disclosures provide ranges, not exact transaction values.">Disclosed range</th></tr></thead>
           <tbody id="trade-rows"></tbody>
         </table>
         <div class="state" id="state" hidden></div>
@@ -178,7 +188,7 @@
         previous.disabled = true;
         next.disabled = true;
 
-        const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
+        const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset), ticker_only: "true" });
         for (const [key, value] of new FormData(form).entries()) {
           if (String(value).trim()) params.set(key, String(value).trim());
         }
@@ -227,16 +237,16 @@
         state.hidden = true;
         rows.innerHTML = items.map((trade, index) => {
           const tradeJson = escapeHtml(JSON.stringify(trade));
-          const type = escapeHtml(readable(trade.transaction_type));
-          const typeClass = trade.transaction_type === "purchase" ? "type-purchase" : trade.transaction_type === "sale" ? "type-sale" : "";
+          const sideValue = trade.transaction_type === "purchase" ? "BUY" : trade.transaction_type === "sale" ? "SELL" : readable(trade.transaction_type);
+          const sideClass = trade.transaction_type === "sale" ? "side-sale" : "";
           return `<tr tabindex="0" role="button" aria-label="View trade by ${escapeHtml(trade.member_name)} in ${escapeHtml(trade.asset_name)}" data-trade="${tradeJson}" data-index="${index}">
             <td><span class="member">${cell(trade.member_name)}</span><span class="secondary">${cell(trade.source_system, "")}</span></td>
             <td>${escapeHtml(readable(trade.chamber))}</td>
             <td>${escapeHtml(safeDate(trade.transaction_date))}</td>
             <td>${trade.ticker ? `<span class="ticker">${cell(trade.ticker)}</span>` : '<span class="ticker-empty">—</span>'}</td>
-            <td>${cell(trade.asset_name)}${trade.asset_type ? `<span class="secondary">${escapeHtml(trade.asset_type)}</span>` : ""}</td>
-            <td><span class="type ${typeClass}">${type}</span></td>
-            <td class="amount">${cell(trade.amount_range)}</td>
+            <td class="asset-cell" title="${cell(trade.asset_name, "")}">${cell(trade.asset_name)}${trade.asset_type ? `<span class="secondary">${escapeHtml(trade.asset_type)}</span>` : ""}</td>
+            <td><span class="side ${sideClass}">${escapeHtml(sideValue)}</span></td>
+            <td class="amount" title="Reported range from disclosure; exact amount not provided.">${cell(trade.amount_range)}</td>
           </tr>`;
         }).join("");
         rows.querySelectorAll("tr").forEach((row) => {

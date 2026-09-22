@@ -23,6 +23,7 @@ def _build_trade_filters(
     start_date: date | None = None,
     end_date: date | None = None,
     transaction_type: TransactionType | None = None,
+    ticker_only: bool = False,
 ) -> TradeFilters:
     return TradeFilters(
         limit=limit,
@@ -34,6 +35,7 @@ def _build_trade_filters(
         start_date=start_date,
         end_date=end_date,
         transaction_type=transaction_type,
+        ticker_only=ticker_only,
     )
 
 
@@ -43,6 +45,7 @@ def list_trades(
     offset: int = Query(default=0, ge=0),
     chamber: Chamber | None = None,
     ticker: str | None = None,
+    ticker_only: bool = False,
     member_name: str | None = Query(default=None, min_length=1, max_length=255),
     transaction_type: TransactionType | None = None,
     start_date: date | None = None,
@@ -55,6 +58,7 @@ def list_trades(
         offset=offset,
         chamber=chamber,
         ticker=ticker,
+        ticker_only=ticker_only,
         member_name=member_name,
         transaction_type=transaction_type,
         start_date=start_date,

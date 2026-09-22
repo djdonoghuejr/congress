@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -39,13 +40,21 @@ class IngestionService:
         connector: BaseConnector,
         parser: BaseParser,
         discovery_kwargs: dict[str, Any],
+        skip_existing_before: date | None = None,
     ) -> IngestionRun:
         run = IngestionRun(
             source_system=connector.source_system,
             chamber=connector.chamber,
             status=IngestionRunStatus.RUNNING,
             started_at=utcnow(),
-            parameters=to_jsonable(discovery_kwargs),
+            parameters={
+                **to_jsonable(discovery_kwargs),
+                **(
+                    {"skip_existing_before": skip_existing_before.isoformat()}
+                    if skip_existing_before
+                    else {}
+                ),
+            },
         )
         self.session.add(run)
         self.session.commit()
@@ -60,6 +69,23 @@ class IngestionService:
         for listing in batch.listings:
             filing_id = None
             try:
+                existing_filing = self.session.scalar(
+                    select(Filing).where(
+                        Filing.source_system == listing.source_system,
+                        Filing.source_filing_id == listing.source_filing_id,
+                    )
+                )
+                if (
+                    skip_existing_before is not None
+                    and existing_filing is not None
+                    and existing_filing.status == FilingStatus.PARSED
+                    and existing_filing.disclosure_date is not None
+                    and existing_filing.disclosure_date < skip_existing_before
+                ):
+                    run.skipped_count += 1
+                    self.session.commit()
+                    continue
+
                 filer = self._upsert_filer(listing)
                 filing = self._upsert_filing(listing, filer)
                 filing_id = filing.id

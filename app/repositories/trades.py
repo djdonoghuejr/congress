@@ -20,6 +20,7 @@ class TradeFilters:
     offset: int
     chamber: Chamber | None = None
     ticker: str | None = None
+    ticker_only: bool = False
     member_id: UUID | None = None
     member_name: str | None = None
     transaction_type: TransactionType | None = None
@@ -45,6 +46,8 @@ class TradeRepository:
             statement = statement.where(Transaction.chamber == filters.chamber)
         if filters.ticker:
             statement = statement.where(func.upper(Transaction.ticker) == filters.ticker)
+        elif filters.ticker_only:
+            statement = statement.where(Transaction.ticker.is_not(None), func.trim(Transaction.ticker) != "")
         if filters.member_id:
             statement = statement.where(Transaction.filer_id == filters.member_id)
         if filters.member_name:

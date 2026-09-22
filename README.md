@@ -92,6 +92,29 @@ python -m app.cli ingest-house --year 2025
 Optional flags:
 
 - `--limit N` for either command to cap discovery during local development
+- `--skip-existing-before YYYY-MM-DD` to avoid re-fetching successfully parsed older filings
+
+## Automatic ingestion on Windows
+
+The scheduler helper runs Senate ingestion daily over a 14-day overlap and scans the current House
+filing-year index weekly on Sundays. Successfully parsed filings older than the overlap are skipped;
+new filing IDs and recent records are still processed. It writes per-run logs under `logs/ingestion/`
+and retries failed tasks up to three times.
+
+Before registering the task, install dependencies, configure `.env`, start Docker Desktop, and apply
+the current database migrations once:
+
+```powershell
+python -m pip install -e .[dev]
+alembic upgrade head
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\register-ingestion-task.ps1
+```
+
+The task runs daily at 6:00 AM by default. To choose another 24-hour time, pass `-StartTime`, such as
+`-StartTime "08:30"`. It runs under your Windows account; keep the computer awake and logged in, and
+configure Docker Desktop to start when you sign in. Task Scheduler is configured to ignore overlapping
+runs and retry failed runs. Trigger the task once from Task Scheduler to verify the setup. Logs are
+available in `logs/ingestion/`.
 
 ## Research copilot
 
